@@ -34,6 +34,11 @@ pub fn run() {
             commands::scene::detect_scenes,
             commands::scene::calculate_frame_similarity,
             commands::scene::get_video_info,
+            commands::ocr_engine::init_ocr_engine,
+            commands::ocr_engine::process_image_ocr,
+            commands::ocr_engine::process_roi_ocr,
+            commands::ocr_engine::get_available_ocr_engines,
+            commands::ocr_engine::get_ocr_engine_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

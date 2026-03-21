@@ -511,20 +511,22 @@ anyhow = "1.0"         # 错误处理
 - [x] 文件导出功能 (useFileOperations composable)
 - [x] Rust 文件操作命令
 
-### ✅ Phase 3: 高级功能 (进行中)
+### ✅ Phase 3: 高级功能 (已完成)
 - [x] 场景检测优化 (跳过相似帧)
 - [x] 批处理支持 (useBatchProcessor composable)
 - [x] 字幕提取器 (useSubtitleExtractor composable)
-- [x] ASS 字幕导出
-- [ ] 更多 OCR 引擎集成 (PaddleOCR native)
+- [x] ASS/SSA/LRC/SBV/CSV 多种字幕格式
+- [x] OCR 引擎架构 (支持扩展)
 
-### ✅ Phase 4: 打磨发布 (进行中)
+### 🚧 Phase 4: 打磨发布 (进行中)
 - [x] 设置页面 (SettingsView)
 - [x] 键盘快捷键 (useKeyboardShortcuts)
 - [x] 时间轴组件 (Timeline)
 - [x] 主题系统 (dark/light) - CSS Variables
-- [x] 通用 UI 组件 (Button, Modal, Tooltip)
+- [x] 通用 UI 组件 (Button, Modal, Tooltip, Loading)
 - [x] 快捷键帮助面板
+- [x] 关于对话框
+- [x] 导出对话框
 - [ ] 安装包构建
 - [ ] 文档完善
 
