@@ -495,15 +495,17 @@ anyhow = "1.0"         # 错误处理
 - [x] 样式系统搭建（SCSS + CSS Variables）
 - [x] 基础布局组件 (ToolBar, SidePanel, VideoPreview, SubtitlePanel, StatusBar)
 - [x] CLI 脚手架 (visionsub-cli)
+- [x] Pinia 状态管理 (project, subtitle, settings stores)
+- [x] TypeScript 类型定义 (video, subtitle types)
 
 ### 🚧 Phase 2: 核心功能 (进行中)
-- [ ] 视频导入与播放
-- [ ] ROI 可视化选择器
-- [ ] Tesseract.js OCR 集成
+- [x] 视频导入与播放 (useVideoPlayer composable)
+- [x] ROI 可视化选择器 (ROISelector component)
+- [x] Tesseract.js OCR 集成 (useOCREngine composable)
 - [ ] 字幕列表与编辑
+- [ ] 帧-字幕对应数据模型
 
 ### 📋 Phase 3: 高级功能 (待开始)
-- [ ] 帧-字幕对应系统
 - [ ] 多格式导出 (SRT, WebVTT, ASS, JSON)
 - [ ] 场景检测优化
 - [ ] 批处理支持
