@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, windows-latest, macos-latest]
+        platform: [ubuntu-latest]
     
     steps:
       - name: Checkout code
@@ -25,23 +25,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
       
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-      
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-      
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
       
       - name: Install dependencies
         run: pnpm install
@@ -55,27 +44,16 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: pnpm build
       
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Create draft release
+        uses: softprops/action-gh-release@v1
         with:
-          toolchain: stable
-      
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.VERSION }}
-        with:
-          tagName: v${{ env.VERSION }}
-          releaseName: 'VisionSub v${{ env.VERSION }}'
-          releaseBody: |
-            ## Downloads
+          body: |
+            ## VisionSub v${{ steps.version.outputs.VERSION }}
             
             Download the installer for your platform.
             
-            ## What's New
-            
             See [CHANGELOG](./CHANGELOG.md) for details.
-            
-          releaseDraft: false
+          draft: true
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
