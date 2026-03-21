@@ -518,7 +518,7 @@ anyhow = "1.0"         # 错误处理
 - [x] ASS/SSA/LRC/SBV/CSV 多种字幕格式
 - [x] OCR 引擎架构 (支持扩展)
 
-### 🚧 Phase 4: 打磨发布 (进行中)
+### 🚧 Phase 4: 打磨发布 (已完成)
 - [x] 设置页面 (SettingsView)
 - [x] 键盘快捷键 (useKeyboardShortcuts)
 - [x] 时间轴组件 (Timeline)
@@ -528,7 +528,8 @@ anyhow = "1.0"         # 错误处理
 - [x] 关于对话框
 - [x] 导出对话框
 - [x] 文档完善 (README, CONTRIBUTING, CHANGELOG)
-- [ ] 安装包构建 (CI/CD)
+- [x] GitHub 模板 (Issue, PR, FUNDING, SECURITY)
+- [ ] 安装包构建 (CI/CD) - 需推送 tag 触发
 
 ---
 
