@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import AboutDialog from '@/components/common/AboutDialog.vue'
 
 const projectName = ref('未命名项目')
+const showAbout = ref(false)
 
 function handleOpenFile() {
   console.log('[ToolBar] Open file')
@@ -9,6 +11,10 @@ function handleOpenFile() {
 
 function handleSave() {
   console.log('[ToolBar] Save project')
+}
+
+function openAbout() {
+  showAbout.value = true
 }
 </script>
 
@@ -41,8 +47,13 @@ function handleSave() {
       <button class="toolbar-btn icon-only" title="设置">
         <span class="btn-icon">⚙️</span>
       </button>
+      <button class="toolbar-btn icon-only" title="关于" @click="openAbout">
+        <span class="btn-icon">ℹ️</span>
+      </button>
     </div>
   </header>
+  
+  <AboutDialog v-model:open="showAbout" />
 </template>
 
 <style lang="scss" scoped>
