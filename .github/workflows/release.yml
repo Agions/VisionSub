@@ -32,6 +32,9 @@ jobs:
         with:
           version: 9
 
+      - name: Add pnpm to PATH
+        run: echo "$HOME/setup-pnpm/node_modules/.bin" >> $GITHUB_PATH
+
       - name: Get pnpm store directory
         shell: bash
         run: |
@@ -89,6 +92,11 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
+
+      - name: Add pnpm to PATH
+        run: |
+          echo "$HOME/setup-pnpm/node_modules/.bin" >> $GITHUB_PATH 2>/dev/null || true
+          echo "~/setup-pnpm/node_modules/.bin" >> $GITHUB_PATH 2>/dev/null || true
 
       - name: Get pnpm store directory
         shell: bash
