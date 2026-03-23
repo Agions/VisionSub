@@ -24,6 +24,29 @@ const DEFAULT_SETTINGS: Settings = {
   maxHistory: 50
 }
 
+/**
+ * 渐进式清理 localStorage 中的非必要数据
+ * @param keys 要清理的 key 前缀列表
+ */
+function cleanupLocalStorage(keys: string[]) {
+  try {
+    const allKeys = Object.keys(localStorage)
+    for (const key of allKeys) {
+      // 清理指定的 key 和带有这些前缀的 key
+      if (keys.includes(key) || keys.some(k => key.startsWith(k))) {
+        try {
+          localStorage.removeItem(key)
+          console.debug('[Settings] Cleaned up:', key)
+        } catch {
+          // 单个 key 删除失败不影响其他
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Settings] Failed to cleanup localStorage:', e)
+  }
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   // Load from localStorage
   function loadSettings(): Settings {
@@ -52,13 +75,25 @@ export const useSettingsStore = defineStore('settings', () => {
       localStorage.setItem('visionsub-settings', serialized)
     } catch (e: any) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
-        console.warn('[Settings] localStorage quota exceeded, clearing old data')
-        // 尝试清理并重试
+        console.warn('[Settings] localStorage quota exceeded, attempting cleanup')
+        // 渐进式清理：先尝试清理其他非必要数据
+        cleanupLocalStorage(['visionsub-thumbnails', 'visionsub-cache', 'visionsub-temp'])
+        
+        // 重试保存
         try {
-          localStorage.removeItem('visionsub-settings')
-          localStorage.setItem('visionsub-settings', JSON.stringify(DEFAULT_SETTINGS))
+          localStorage.setItem('visionsub-settings', JSON.stringify(newSettings))
+          console.info('[Settings] Successfully saved after cleanup')
         } catch {
-          console.error('[Settings] Failed to save even after clearing')
+          // 如果还是失败，保存最小可用配置
+          console.warn('[Settings] Cleanup insufficient, saving minimal config')
+          try {
+            localStorage.setItem('visionsub-settings', JSON.stringify({
+              theme: newSettings.theme,
+              language: newSettings.language
+            }))
+          } catch {
+            console.error('[Settings] Failed to save even minimal config')
+          }
         }
       } else {
         console.warn('[Settings] Failed to save settings:', e)

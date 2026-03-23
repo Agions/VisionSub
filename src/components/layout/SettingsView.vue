@@ -2,9 +2,17 @@
 import { ref, watch, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useTheme } from '@/composables/useTheme'
+import { useSystemCheck } from '@/composables/useSystemCheck'
 
 const settingsStore = useSettingsStore()
 const { setTheme } = useTheme()
+const { 
+  checkDependencies, 
+  lastResult, 
+  isChecking, 
+  getStatusMessage,
+  isDependencyInstalled 
+} = useSystemCheck()
 
 const localSettings = ref({ ...settingsStore.settings })
 
@@ -16,6 +24,8 @@ watch(localSettings, (newSettings) => {
 
 onMounted(() => {
   localSettings.value = { ...settingsStore.settings }
+  // Run system check on mount
+  checkDependencies()
 })
 
 function resetAll() {
@@ -24,6 +34,18 @@ function resetAll() {
     localSettings.value = { ...settingsStore.settings }
     setTheme(localSettings.value.theme)
   }
+}
+
+async function runDiagnostics() {
+  await checkDependencies()
+}
+
+function getDepStatusClass(dep: { name: string, installed: boolean }) {
+  return dep.installed ? 'status-ok' : 'status-error'
+}
+
+function getDepIcon(dep: { name: string, installed: boolean }) {
+  return dep.installed ? '✓' : '✗'
 }
 </script>
 
@@ -147,6 +169,51 @@ function resetAll() {
             />
           </div>
         </div>
+      </section>
+
+      <!-- System Diagnostics -->
+      <section class="settings-section">
+        <h3 class="section-title">系统诊断</h3>
+        
+        <div class="diagnostics-status" :class="lastResult?.all_satisfied ? 'ok' : 'warning'">
+          <span class="status-icon">{{ lastResult?.all_satisfied ? '✓' : '⚠' }}</span>
+          <span class="status-text">{{ getStatusMessage() }}</span>
+        </div>
+
+        <div class="dependency-list" v-if="lastResult">
+          <div 
+            v-for="dep in lastResult.dependencies" 
+            :key="dep.name"
+            class="dependency-item"
+          >
+            <div class="dep-info">
+              <span class="dep-name">{{ dep.name }}</span>
+              <span class="dep-version" v-if="dep.version">{{ dep.version }}</span>
+              <span class="dep-error" v-if="dep.error">{{ dep.error }}</span>
+            </div>
+            <span 
+              class="dep-status"
+              :class="getDepStatusClass(dep)"
+            >
+              {{ getDepIcon(dep) }} {{ dep.installed ? '已安装' : '未安装' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="recommendations" v-if="lastResult?.recommendations.length">
+          <h4 class="rec-title">建议</h4>
+          <ul class="rec-list">
+            <li v-for="(rec, i) in lastResult.recommendations" :key="i">{{ rec }}</li>
+          </ul>
+        </div>
+
+        <button 
+          class="btn-diagnostics" 
+          @click="runDiagnostics"
+          :disabled="isChecking"
+        >
+          {{ isChecking ? '检查中...' : '重新检查' }}
+        </button>
       </section>
 
       <!-- About -->
@@ -369,6 +436,137 @@ function resetAll() {
     background: $primary;
     color: white;
     text-decoration: none;
+  }
+}
+
+// System Diagnostics
+.diagnostics-status {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  margin-bottom: $space-4;
+  
+  &.ok {
+    background: rgba($success, 0.1);
+    color: $success;
+  }
+  
+  &.warning {
+    background: rgba($warning, 0.1);
+    color: $warning;
+  }
+  
+  .status-icon {
+    font-size: $text-lg;
+  }
+  
+  .status-text {
+    font-size: $text-sm;
+  }
+}
+
+.dependency-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  margin-bottom: $space-4;
+}
+
+.dependency-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3;
+  background: $bg-surface;
+  border-radius: $radius-md;
+  
+  .dep-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .dep-name {
+    font-size: $text-sm;
+    font-weight: 500;
+    color: $text-primary;
+  }
+  
+  .dep-version {
+    font-size: $text-xs;
+    color: $text-muted;
+    font-family: $font-mono;
+  }
+  
+  .dep-error {
+    font-size: $text-xs;
+    color: $error;
+  }
+  
+  .dep-status {
+    font-size: $text-xs;
+    padding: $space-1 $space-2;
+    border-radius: $radius-sm;
+    
+    &.status-ok {
+      background: rgba($success, 0.1);
+      color: $success;
+    }
+    
+    &.status-error {
+      background: rgba($error, 0.1);
+      color: $error;
+    }
+  }
+}
+
+.recommendations {
+  padding: $space-3;
+  background: $bg-surface;
+  border-radius: $radius-md;
+  margin-bottom: $space-4;
+  
+  .rec-title {
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $text-secondary;
+    margin-bottom: $space-2;
+  }
+  
+  .rec-list {
+    margin: 0;
+    padding-left: $space-4;
+    
+    li {
+      font-size: $text-sm;
+      color: $text-muted;
+      margin-bottom: $space-1;
+    }
+  }
+}
+
+.btn-diagnostics {
+  width: 100%;
+  padding: $space-3;
+  font-size: $text-sm;
+  font-weight: 500;
+  color: $text-primary;
+  background: $bg-surface;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:hover:not(:disabled) {
+    background: $bg-overlay;
+    border-color: $primary;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 </style>

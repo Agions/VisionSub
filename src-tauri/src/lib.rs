@@ -22,6 +22,7 @@ pub fn run() {
             commands::video::get_video_metadata,
             commands::video::extract_frames,
             commands::video::extract_frame_at_time,
+            commands::video::extract_cropped_frame_at_time,
             commands::video::detect_scenes,
             commands::ocr::process_frame,
             commands::ocr::process_roi,
@@ -40,6 +41,10 @@ pub fn run() {
             commands::ocr_engine::process_roi_ocr,
             commands::ocr_engine::get_available_ocr_engines,
             commands::ocr_engine::get_ocr_engine_info,
+            commands::ocr_engine::ocr_image_tesseract,
+            commands::ocr_engine::ocr_base64_image,
+            commands::system::check_system_dependencies,
+            commands::system::get_tesseract_languages,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -27,12 +27,114 @@ pub async fn detect_scenes(
         return Err(format!("File not found: {}", video_path));
     }
     
-    // Scene detection requires native video processing library
-    // Real implementation would use OpenCV for frame comparison
-    // For now, return empty list - user can implement with their preferred library
-    tracing::info!("Scene detection requires native video processing library");
+    // 获取视频 FPS 用于帧号计算
+    let fps = match get_video_fps(&video_path) {
+        Ok(f) => f,
+        Err(e) => {
+            tracing::warn!("Failed to get video FPS: {}, using default 30.0", e);
+            30.0
+        }
+    };
     
-    Ok(vec![])
+    // Use ffmpeg for scene detection via select filter
+    let scene_timestamps = detect_scenes_ffmpeg(&video_path, config.threshold, fps)?;
+    
+    // Convert timestamps to SceneChange list
+    let scene_changes: Vec<SceneChange> = scene_timestamps
+        .into_iter()
+        .enumerate()
+        .map(|(i, timestamp)| SceneChange {
+            frame_index: (timestamp * fps) as u64,
+            timestamp,
+            similarity: 0.0, // ffmpeg scene detection doesn't provide this
+        })
+        .collect();
+    
+    tracing::info!("Detected {} scene changes", scene_changes.len());
+    Ok(scene_changes)
+}
+
+/// Get video FPS using ffprobe
+fn get_video_fps(path: &str) -> Result<f64, String> {
+    use std::process::Command;
+    
+    let output = Command::new("ffprobe")
+        .args([
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_streams",
+            path
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run ffprobe: {}", e))?;
+    
+    if !output.status.success() {
+        return Err("ffprobe exited with error".to_string());
+    }
+    
+    let json_str = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&json_str)
+        .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
+    
+    // Find video stream
+    let video_stream = json["streams"]
+        .as_array()
+        .and_then(|streams| {
+            streams.iter().find(|s| s["codec_type"] == "video")
+        })
+        .ok_or("No video stream found")?;
+    
+    // Parse frame rate (e.g., "30000/1001" -> ~29.97)
+    let fps_str = video_stream["r_frame_rate"].as_str().unwrap_or("30/1");
+    let fps_parts: Vec<&str> = fps_str.split('/').collect();
+    let fps = if fps_parts.len() == 2 {
+        let num: f64 = fps_parts[0].parse().unwrap_or(30.0);
+        let den: f64 = fps_parts[1].parse().unwrap_or(1.0);
+        if den > 0.0 { num / den } else { 30.0 }
+    } else {
+        fps_str.parse().unwrap_or(30.0)
+    };
+    
+    Ok(fps)
+}
+
+/// Detect scene changes using ffmpeg
+fn detect_scenes_ffmpeg(path: &str, threshold: f32, fps: f64) -> Result<Vec<f64>, String> {
+    use std::process::Command;
+    
+    // Use ffmpeg with select filter for scene detection
+    // threshold: 0-1 range, convert to ffmpeg's expected value (0-1 for scene detection)
+    let threshold_str = format!("{}", threshold.clamp(0.1, 0.9));
+    
+    let output = Command::new("ffmpeg")
+        .args([
+            "-i", path,
+            "-vf", &format!("select='gt(scene,{})',showinfo", threshold_str),
+            "-f", "null",
+            "-"
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run ffmpeg scene detection: {}", e))?;
+    
+    // Note: ffmpeg scene detection outputs to stderr
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let mut scene_timestamps = Vec::new();
+    
+    for line in stderr.lines() {
+        if line.contains("pts_time:") {
+            // Extract timestamp from showinfo
+            if let Some(time_str) = line.split("pts_time:").nth(1) {
+                let time: f64 = time_str.split_whitespace().next()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(0.0);
+                if time > 0.0 { // Skip timestamp 0
+                    scene_timestamps.push(time);
+                }
+            }
+        }
+    }
+    
+    Ok(scene_timestamps)
 }
 
 #[tauri::command]

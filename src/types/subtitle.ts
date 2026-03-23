@@ -82,7 +82,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
   const events = subtitles.map(sub => {
     const start = formatTimestampASS(sub.startTime)
     const end = formatTimestampASS(sub.endTime)
-    const text = sub.text.replace(/\\/g, '\\\\').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+    // ASS escape rules:
+    // \n = line break (soft)
+    // \N = line break (hard, preferred)
+    // \, = literal comma (commas are delimiters in Dialogue lines)
+    // \h = non-breaking space
+    // \{ and \} = literal braces
+    // \\ = literal backslash
+    const text = sub.text
+        .replace(/\\/g, '\\\\')       // Escape backslashes first
+        .replace(/\{/g, '\\{')         // Escape opening braces
+        .replace(/\}/g, '\\}')         // Escape closing braces
+        .replace(/,/g, '\\,')          // Escape commas
+        .replace(/\n/g, '\\N')         // Convert newlines to \N
     return `Dialogue: 0,${start},${end},Default,,0,0,0,,${text}`
   }).join('\n')
 

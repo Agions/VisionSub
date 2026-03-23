@@ -11,6 +11,10 @@ edition = "2021"
 name = "visionsub_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[test]]
+name = "unit_tests"
+path = "tests/unit_tests.rs"
+
 [[bin]]
 name = "visionsub-cli"
 path = "src/main_cli.rs"
@@ -30,8 +34,9 @@ thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4.0", features = ["derive"] }
-base64 = "0.22"
+base64 = { version = "0.22", features = ["engine"] }
 chrono = "0.4"
+image = "0.25"  # For image processing in OCR
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-opener = "2.0"
