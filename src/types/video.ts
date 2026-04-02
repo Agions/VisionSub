@@ -47,11 +47,17 @@ export interface ROI {
 }
 
 export interface ExtractOptions {
-  sceneThreshold: number
-  frameInterval: number
   ocrEngine: OCREngine
   languages: string[]
   confidenceThreshold: number
+  // Advanced OCR
+  multiPass: boolean
+  postProcess: boolean
+  mergeSubtitles: boolean
+  mergeThreshold: number   // similarity threshold 0-1
+  // Frame processing
+  sceneThreshold: number   // 0-1, chi-square threshold for scene detection
+  frameInterval: number     // process every N frames
 }
 
 export type OCREngine = 'paddle' | 'easyocr' | 'tesseract'

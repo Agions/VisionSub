@@ -4,11 +4,14 @@ import { useProjectStore } from '@/stores/project'
 import { useSubtitleStore } from '@/stores/subtitle'
 import { ROI_PRESETS, type OCREngine } from '@/types/video'
 import type { ExportFormats } from '@/types/subtitle'
+import type { useSubtitleExtractor } from '@/composables/useSubtitleExtractor'
 
 const projectStore = useProjectStore()
 const subtitleStore = useSubtitleStore()
 
 const openExportDialog = inject<() => void>('openExportDialog')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const subtitleExtractor = inject<any>('subtitleExtractor')!
 
 function handleExport(format: keyof ExportFormats) {
   subtitleStore.exportFormats[format] = !subtitleStore.exportFormats[format]
@@ -128,14 +131,29 @@ function toggleLanguage(id: string) {
   projectStore.setLanguages([...selectedLanguages.value])
 }
 
-function handleStartExtraction() {
+async function handleStartExtraction() {
   if (!projectStore.hasVideo) return
   extractStartTime.value = Date.now() / 1000
-  subtitleStore.startExtraction()
+  // Initialize language from selectedLanguages
+  projectStore.setLanguages([...selectedLanguages.value])
+  // Sync all advanced options to store
+  projectStore.setOCROptions({
+    ocrEngine: projectStore.extractOptions.ocrEngine,
+    languages: [...selectedLanguages.value],
+    confidenceThreshold: confidenceThreshold.value,
+    multiPass: multiPassEnabled.value,
+    postProcess: postProcessEnabled.value,
+    mergeSubtitles: mergeEnabled.value,
+    mergeThreshold: mergeThreshold.value / 100,
+    sceneThreshold: sceneSensitivity.value / 100,
+    frameInterval: frameInterval.value,
+  })
+  // Start extraction (reads all options from store)
+  await subtitleExtractor.startExtraction()
 }
 
 function handleStopExtraction() {
-  subtitleStore.finishExtraction()
+  subtitleExtractor.stopExtraction()
 }
 
 // SVG progress ring constants

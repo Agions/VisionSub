@@ -27,11 +27,15 @@ export const useProjectStore = defineStore('project', () => {
   
   // Extract Options
   const extractOptions = ref<ExtractOptions>({
-    sceneThreshold: 0.3,
-    frameInterval: 1,
     ocrEngine: 'paddle',
     languages: ['ch'],
-    confidenceThreshold: 0.7
+    confidenceThreshold: 0.7,
+    multiPass: true,
+    postProcess: true,
+    mergeSubtitles: true,
+    mergeThreshold: 0.80,
+    sceneThreshold: 0.3,
+    frameInterval: 1,
   })
   
   // Computed

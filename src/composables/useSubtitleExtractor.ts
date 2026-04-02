@@ -94,25 +94,33 @@ export function useSubtitleExtractor() {
     }
   }
 
-  // Main extraction loop
-  async function startExtraction(roi: ROI, ocrConfig: OCRConfig) {
+  // Main extraction loop — reads all options from projectStore.extractOptions
+  async function startExtraction() {
     if (!projectStore.videoMeta) {
       throw new Error('No video loaded')
     }
+
+    const opts = projectStore.extractOptions
+    const roi = projectStore.selectedROI
 
     isExtracting.value = true
     isPaused.value = false
     extractedCount.value = 0
     totalFrames.value = projectStore.videoMeta.totalFrames
 
-    // Initialize OCR engine — use config's engine and language mapping
+    // Build OCR config from store options
+    const ocrConfig: OCRConfig = {
+      engine: opts.ocrEngine,
+      language: opts.languages,
+      confidenceThreshold: opts.confidenceThreshold,
+    }
+
+    // Initialize OCR engine
     await ocrEngine.init(ocrConfig.engine, ocrConfig.language)
 
     subtitleStore.startExtraction()
 
     let prevFrameData: ImageData | null = null
-    const sceneThreshold = projectStore.extractOptions.sceneThreshold
-    const frameInterval = projectStore.extractOptions.frameInterval
 
     for (let frameIndex = 0; frameIndex < totalFrames.value; frameIndex++) {
       // Check if paused or stopped
@@ -121,32 +129,72 @@ export function useSubtitleExtractor() {
         if (!isExtracting.value) break
       }
 
-      // Seek to frame
-      const timestamp = frameIndex / projectStore.videoMeta.fps
-      // Note: In real implementation, we'd seek the video element
-      
       // Capture frame
       const frameData = videoPlayer.captureFrame()
       if (!frameData) continue
 
       // Scene detection
-      if (prevFrameData && !detectSceneChange(prevFrameData, frameData, sceneThreshold)) {
-        // Skip this frame - too similar to previous
-        continue
-      }
-
-      // Only process every Nth frame based on interval
-      if (frameIndex % frameInterval !== 0) {
+      if (prevFrameData && !detectSceneChange(prevFrameData, frameData, opts.sceneThreshold)) {
         prevFrameData = frameData
         continue
       }
 
-      // Process OCR
+      // Frame interval skip
+      if (frameIndex % opts.frameInterval !== 0) {
+        prevFrameData = frameData
+        continue
+      }
+
+      // Process OCR — optionally multi-pass for higher accuracy
       try {
-        const subtitle = await processFrame(frameData, frameIndex, roi, ocrConfig)
-        
-        if (subtitle) {
-          subtitleStore.addSubtitle(subtitle)
+        let result: { text: string; confidence: number } | null = null
+
+        if (opts.multiPass && opts.postProcess) {
+          // Multi-pass: run multiple times and merge
+          const passes = await ocrEngine.processMultiPass(frameData, ocrConfig, {
+            multiPass: true,
+            preprocessMode: 'subtitle',
+          })
+          // Merge word-level results from multi-pass
+          const mergedWords = passes ?? []
+          const fullText = mergedWords.map(r => r.text).join(' ')
+          const avgConf = mergedWords.length > 0
+            ? mergedWords.reduce((s, r) => s + r.confidence, 0) / mergedWords.length
+            : 0
+
+          // Apply post-processing
+          const processed = ocrEngine.postProcessText(fullText, opts.languages[0])
+          const calibrated = ocrEngine.calibrateConfidence(processed, avgConf, opts.languages[0])
+
+          if (processed.trim().length > 0 && calibrated >= opts.confidenceThreshold) {
+            const fps = projectStore.videoMeta.fps
+            result = { text: processed, confidence: calibrated }
+          }
+        } else {
+          // Single-pass OCR
+          const singleResult = await ocrEngine.processROI(frameData, roi, ocrConfig)
+          if (singleResult.text.trim().length > 0 && singleResult.confidence >= opts.confidenceThreshold) {
+            result = { text: singleResult.text, confidence: singleResult.confidence }
+          }
+        }
+
+        if (result) {
+          const fps = projectStore.videoMeta.fps
+          const timestamp = frameIndex / fps
+          subtitleStore.addSubtitle({
+            id: `sub-${frameIndex}-${Date.now()}`,
+            index: extractedCount.value + 1,
+            startTime: timestamp,
+            endTime: timestamp + 2,
+            startFrame: frameIndex,
+            endFrame: frameIndex,
+            text: result.text,
+            confidence: result.confidence,
+            language: opts.languages[0],
+            roi,
+            thumbnailUrls: [],
+            edited: false,
+          })
           extractedCount.value++
         }
       } catch (e) {
@@ -162,7 +210,7 @@ export function useSubtitleExtractor() {
 
     // Post-processing: merge similar consecutive subtitles
     const rawSubs = subtitleStore.subtitles
-    if (rawSubs.length > 1) {
+    if (opts.mergeSubtitles && rawSubs.length > 1) {
       const merged = ocrEngine.mergeSimilarSubtitles(
         rawSubs.map(s => ({
           startTime: s.startTime,
@@ -172,16 +220,18 @@ export function useSubtitleExtractor() {
           text: s.text,
           confidence: s.confidence,
         })),
-        0.80,   // similarity threshold
-        0.5     // max time gap (seconds)
+        opts.mergeThreshold,
+        0.5
       )
-      // Replace subtitles with merged results (re-index)
+      // Reconstruct subtitle items preserving full data, updating text/conf/duration
       subtitleStore.setSubtitles(
-        merged.map((s, i) => ({
-          ...rawSubs.find(r => r.text === s.text && Math.abs(r.startTime - s.startTime) < 0.1)!,
-          ...s,
-          index: i + 1,
-        })).filter(Boolean)
+        merged.map((s, i) => {
+          const match = rawSubs.find(r =>
+            Math.abs(r.startTime - s.startTime) < 0.1 &&
+            r.text === s.text
+          )
+          return match ? { ...match, ...s, index: i + 1 } : null
+        }).filter(Boolean) as typeof rawSubs
       )
     }
 
