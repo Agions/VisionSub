@@ -478,17 +478,10 @@ export function useOCREngine() {
     }>,
     similarityThreshold: number = 0.80,
     maxGap: number = 0.5
-  ): Array<{
-    startTime: number
-    endTime: number
-    startFrame: number
-    endFrame: number
-    text: string
-    confidence: number
-  }> {
+  ): SubtitleLite[] {
     if (subtitles.length === 0) return subtitles
 
-    const result: typeof subtitles = []
+    const result: SubtitleLite[] = []
     let current = { ...subtitles[0] }
 
     for (let i = 1; i < subtitles.length; i++) {
@@ -537,6 +530,258 @@ export function useOCREngine() {
     return 1 - dist / Math.max(a.length, b.length)
   }
   
+  /**
+   * Minimal subtitle shape used in post-processing pipelines.
+   * Avoids coupling to the full SubtitleItem type.
+   */
+  type SubtitleLite = {
+    startTime: number
+    endTime: number
+    startFrame: number
+    endFrame: number
+    text: string
+    confidence: number
+  }
+
+  /**
+   * Filter out jitter subtitles — single-frame noise from OCR instability.
+   * A jitter subtitle is: very short duration (< minDuration) +
+   * same text as at least one neighbor + low confidence.
+   * These are removed and their time ranges merged into surrounding subtitles.
+   */
+  function filterJitterSubtitles(
+    subtitles: SubtitleLite[],
+    minDuration: number = 0.3,
+    minConfidence: number = 0.75
+  ): SubtitleLite[] {
+    if (subtitles.length < 2) return subtitles
+
+    const result: SubtitleLite[] = []
+    let i = 0
+
+    while (i < subtitles.length) {
+      const curr = subtitles[i]
+      const duration = curr.endTime - curr.startTime
+      const isJitter =
+        duration < minDuration &&
+        curr.confidence < minConfidence
+
+      if (!isJitter) {
+        result.push(curr)
+        i++
+        continue
+      }
+
+      // Check neighbors for text similarity
+      const prev = result[result.length - 1]
+      const next = subtitles[i + 1]
+
+      const similarToPrev = prev && textSimilarity(prev.text, curr.text) > 0.85
+      const similarToNext = next && textSimilarity(curr.text, next.text) > 0.85
+
+      if (similarToPrev && similarToNext) {
+        // Bridge: absorb into prev, extend endTime to cover curr + next gap
+        prev.endTime = next.endTime
+        prev.endFrame = next.endFrame
+        // Skip both curr and next
+        i += 2
+      } else if (similarToPrev) {
+        // Absorb into previous
+        prev.endTime = Math.max(prev.endTime, curr.endTime)
+        prev.endFrame = Math.max(prev.endFrame, curr.endFrame)
+        i++
+      } else if (similarToNext) {
+        // Absorb next into current position
+        curr.endTime = next.endTime
+        curr.endFrame = next.endFrame
+        result.push(curr)
+        i += 2
+      } else {
+        // No neighbor similarity — keep it (not jitter after all)
+        result.push(curr)
+        i++
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Detect and merge "split subtitles" — same text separated by a gap
+   * where scene detection skipped the intermediate frames.
+   * Unlike mergeSimilarSubtitles (which only handles adjacent items),
+   * this scans for same/similar text with gaps and bridges them.
+   *
+   * maxGap: max seconds between split parts to still merge (default 1.5s)
+   */
+  function mergeSplitSubtitles(
+    subtitles: SubtitleLite[],
+    similarityThreshold: number = 0.85,
+    maxGap: number = 1.5
+  ): SubtitleLite[] {
+    if (subtitles.length < 2) return subtitles
+
+    // Build groups of same/similar text separated by gaps
+    const groups: SubtitleLite[][] = []
+
+    for (const sub of subtitles) {
+      const lastGroup = groups[groups.length - 1]
+      if (!lastGroup) {
+        groups.push([{ ...sub }])
+        continue
+      }
+
+      const last = lastGroup[lastGroup.length - 1]
+      const gap = sub.startTime - last.endTime
+      const similar = textSimilarity(last.text, sub.text) >= similarityThreshold
+      const gapWithinLimit = gap > 0 && gap <= maxGap
+
+      if (similar && gapWithinLimit) {
+        // Same text with a gap — add to current group for merging
+        lastGroup.push({ ...sub })
+      } else {
+        // Different text or gap too large — start new group
+        groups.push([{ ...sub }])
+      }
+    }
+
+    // Merge each group and collect results
+    const result: SubtitleLite[] = []
+
+    for (const group of groups) {
+      if (group.length === 1) {
+        result.push(group[0])
+        continue
+      }
+
+      // Merge group into single subtitle
+      // Keep earliest start, latest end, highest confidence, text of highest-confidence item
+      const best = group.reduce((best, curr) =>
+        curr.confidence > best.confidence ? curr : best
+      )
+
+      result.push({
+        startTime: group[0].startTime,
+        endTime: group[group.length - 1].endTime,
+        startFrame: group[0].startFrame,
+        endFrame: group[group.length - 1].endFrame,
+        text: best.text,
+        confidence: Math.max(...group.map(s => s.confidence)),
+      })
+    }
+
+    return result
+  }
+
+  /**
+   * Enhanced confidence calibration with more quality signals:
+   * - Penalize: unbalanced brackets/quotes, all-caps (EN), digit-only fragments
+   * - Boost: proper sentence endings, balanced punctuation, natural language patterns
+   */
+  function calibrateConfidenceEnhanced(
+    text: string,
+    rawConfidence: number,
+    lang: string = 'ch'
+  ): number {
+    if (!text) return rawConfidence
+
+    const trimmed = text.trim()
+    const len = trimmed.length
+
+    // Start with base calibration
+    let quality = calibrateConfidence(trimmed, rawConfidence, lang)
+
+    // === Language-specific checks ===
+
+    if (lang === 'ch' || lang === 'chi' || lang === 'ja' || lang === 'ko') {
+      // Chinese/Japanese/Korean checks
+      // Penalize: orphaned CJK radicals or single CJK chars surrounded by spaces
+      if (/ [\u4e00-\u9fff] /.test(text) || / [\u3040-\u30ff] /.test(text)) {
+        quality *= 0.80
+      }
+      // Penalize: unbalanced Chinese quotes
+      const openQuotes = (text.match(/["']/g) || []).length
+      // Note: Chinese quotes are「」『』— rough check
+      const hasUnbalancedQuotes =
+        (text.includes('"') && text.split('"').length % 2 === 0) ||
+        (text.includes("'") && text.split("'").length % 2 === 0)
+      if (hasUnbalancedQuotes) quality *= 0.90
+    } else {
+      // Latin-script checks
+      // Penalize: ALL CAPS (likely OCR error for mixed case language)
+      if (trimmed === trimmed.toUpperCase() && len > 3 && /[a-z]/.test(trimmed)) {
+        quality *= 0.82
+      }
+      // Penalize: digit fragments surrounded by spaces (e.g. " 3 " or " 12 ")
+      if (/ \d{1,3} /.test(text)) quality *= 0.88
+      // Boost: proper sentence ending
+      if (/[.!?]$/.test(trimmed)) quality = Math.min(1, quality * 1.03)
+      // Penalize: trailing comma or semicolon (likely mid-sentence)
+      if (/[,;]\s*$/.test(trimmed) && !/[.!?]$/.test(trimmed)) quality *= 0.88
+    }
+
+    // === Universal checks ===
+
+    // Penalize: repeated trailing character patterns (e.g. "——" or "、、")
+    if (/[、,\.。\-_]{3,}$/.test(text)) quality *= 0.85
+
+    // Boost: reasonable length for a subtitle line (not too short, not a novel)
+    if (len >= 5 && len <= 120) quality = Math.min(1, quality * 1.04)
+    if (len > 200) quality *= 0.92 // suspiciously long
+
+    // Penalize: starts with space or punctuation
+    if (/^[\s,.!?;:]/.test(trimmed)) quality *= 0.90
+
+    return Math.max(0, Math.min(1, quality))
+  }
+
+  /**
+   * Detect subtitle text quality issues and suggest corrections.
+   * Returns an array of { issue, suggestion } for UI hints.
+   */
+  function detectTextQualityIssues(text: string): Array<{ issue: string; suggestion: string }> {
+    const issues: Array<{ issue: string; suggestion: string }> = []
+    const trimmed = text.trim()
+
+    if (trimmed.length === 0) return issues
+
+    // Check for full-width/half-width inconsistency
+    if (/[\uff00-\uffef]/.test(trimmed)) {
+      issues.push({
+        issue: '包含全角字符',
+        suggestion: '建议转换为半角以提高兼容性'
+      })
+    }
+
+    // Check for unbalanced brackets
+    const openBrackets = (trimmed.match(/[\(\[\{]/g) || []).length
+    const closeBrackets = (trimmed.match(/[\)\]\}]/g) || []).length
+    if (openBrackets !== closeBrackets) {
+      issues.push({
+        issue: `括号不匹配 (${openBrackets} 开 / ${closeBrackets} 闭)`,
+        suggestion: '检查并修正括号配对'
+      })
+    }
+
+    // Check for trailing dots (incomplete sentence)
+    if (/[,;，；]$/.test(trimmed) && !/[.!?。！？]$/.test(trimmed)) {
+      issues.push({
+        issue: '字幕以逗号结尾',
+        suggestion: '可能为未完整识别的字幕'
+      })
+    }
+
+    // Check for single-character repetition (OCR glitch)
+    if (/(.)\1{4,}/.test(trimmed)) {
+      issues.push({
+        issue: '检测到重复字符',
+        suggestion: 'OCR 识别错误，建议检查原画面'
+      })
+    }
+
+    return issues
+  }
+
   return {
     isReady,
     isProcessing,
@@ -551,8 +796,12 @@ export function useOCREngine() {
     safeExtractROI,
     postProcessText,
     calibrateConfidence,
+    calibrateConfidenceEnhanced,
     detectDominantScript,
+    detectTextQualityIssues,
     mergeSimilarSubtitles,
+    mergeSplitSubtitles,
+    filterJitterSubtitles,
     textSimilarity,
   }
 }

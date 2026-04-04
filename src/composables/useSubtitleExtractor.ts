@@ -164,7 +164,7 @@ export function useSubtitleExtractor() {
 
           // Apply post-processing
           const processed = ocrEngine.postProcessText(fullText, opts.languages[0])
-          const calibrated = ocrEngine.calibrateConfidence(processed, avgConf, opts.languages[0])
+          const calibrated = ocrEngine.calibrateConfidenceEnhanced(processed, avgConf, opts.languages[0])
 
           if (processed.trim().length > 0 && calibrated >= opts.confidenceThreshold) {
             const fps = projectStore.videoMeta.fps
@@ -174,7 +174,12 @@ export function useSubtitleExtractor() {
           // Single-pass OCR
           const singleResult = await ocrEngine.processROI(frameData, roi, ocrConfig)
           if (singleResult.text.trim().length > 0 && singleResult.confidence >= opts.confidenceThreshold) {
-            result = { text: singleResult.text, confidence: singleResult.confidence }
+            // Apply enhanced post-processing to single-pass results too
+            const processed = ocrEngine.postProcessText(singleResult.text, opts.languages[0])
+            const calibrated = ocrEngine.calibrateConfidenceEnhanced(
+              processed, singleResult.confidence, opts.languages[0]
+            )
+            result = { text: processed, confidence: calibrated }
           }
         }
 
@@ -208,24 +213,31 @@ export function useSubtitleExtractor() {
       prevFrameData = frameData
     }
 
-    // Post-processing: merge similar consecutive subtitles
+    // ── Enhanced post-processing pipeline ──────────────────────────────────
+    // Stage 1: Filter jitter subtitles (very short, low-conf, same as neighbors)
     const rawSubs = subtitleStore.subtitles
     if (opts.mergeSubtitles && rawSubs.length > 1) {
-      const merged = ocrEngine.mergeSimilarSubtitles(
-        rawSubs.map(s => ({
-          startTime: s.startTime,
-          endTime: s.endTime,
-          startFrame: s.startFrame,
-          endFrame: s.endFrame,
-          text: s.text,
-          confidence: s.confidence,
-        })),
-        opts.mergeThreshold,
-        0.5
-      )
+      let processed = rawSubs.map(s => ({
+        startTime: s.startTime,
+        endTime: s.endTime,
+        startFrame: s.startFrame,
+        endFrame: s.endFrame,
+        text: s.text,
+        confidence: s.confidence,
+      }))
+
+      // Stage 1: Filter jitter (OCR noise from unstable frames)
+      processed = ocrEngine.filterJitterSubtitles(processed, 0.3, opts.confidenceThreshold)
+
+      // Stage 2: Merge split subtitles (same text separated by scene-change gap)
+      processed = ocrEngine.mergeSplitSubtitles(processed, opts.mergeThreshold, 1.5)
+
+      // Stage 3: Merge similar consecutive subtitles (Levenshtein-based)
+      processed = ocrEngine.mergeSimilarSubtitles(processed, opts.mergeThreshold, 0.5)
+
       // Reconstruct subtitle items preserving full data, updating text/conf/duration
       subtitleStore.setSubtitles(
-        merged.map((s, i) => {
+        processed.map((s, i) => {
           const match = rawSubs.find(r =>
             Math.abs(r.startTime - s.startTime) < 0.1 &&
             r.text === s.text
