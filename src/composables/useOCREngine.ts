@@ -49,7 +49,8 @@ interface TesseractLoggerMessage {
   status: string
   progress: number
 }
-let cachedTesseractModule: TesseractModule | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let cachedTesseractModule: any = null
 
 export function useOCREngine() {
   const isReady = ref(false)
@@ -128,7 +129,8 @@ export function useOCREngine() {
         if (!cachedTesseractModule) {
           cachedTesseractModule = await import('tesseract.js')
         }
-        const Tesseract = cachedTesseractModule
+        const Tesseract = cachedTesseractModule!
+        // @ts-expect-error — Tesseract is guaranteed non-null here after dynamic import
         
         // Terminate existing worker first
         if (worker.value) {

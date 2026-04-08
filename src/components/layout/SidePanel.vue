@@ -1,5 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, inject } from 'vue'
+import type { Ref } from 'vue'
+
+interface ExtractionSession {
+  isExtracting: Ref<boolean>
+  isPaused: Ref<boolean>
+  currentFrame: Ref<number>
+  totalFrames: Ref<number>
+  extractedCount: Ref<number>
+  startExtraction: () => Promise<void>
+  pauseExtraction: () => void
+  resumeExtraction: () => void
+  stopExtraction: () => void
+}
 import { useProjectStore } from '@/stores/project'
 import { useSubtitleStore } from '@/stores/subtitle'
 import { ROI_PRESETS, type OCREngine } from '@/types/video'

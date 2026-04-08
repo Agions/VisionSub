@@ -74,7 +74,8 @@ export const useSettingsStore = defineStore('settings', () => {
       }
       localStorage.setItem('hardsubx-settings', serialized)
     } catch (e: unknown) {
-      if (e.name === 'QuotaExceededError' || e.code === 22) {
+      const err = e as { name?: string; code?: number; message?: string }
+      if (err.name === 'QuotaExceededError' || err.code === 22) {
         console.warn('[HardSubX Settings] localStorage quota exceeded, attempting cleanup')
         // 渐进式清理：先尝试清理其他非必要数据
         cleanupLocalStorage(['hardsubx-thumbnails', 'hardsubx-cache', 'hardsubx-temp'])
@@ -96,7 +97,7 @@ export const useSettingsStore = defineStore('settings', () => {
           }
         }
       } else {
-        console.warn('[HardSubX Settings] Failed to save settings:', e)
+        console.warn('[HardSubX Settings] Failed to save settings:', err)
       }
     }
   }, { deep: true })

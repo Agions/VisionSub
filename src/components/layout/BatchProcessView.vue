@@ -229,7 +229,7 @@ const s = computed(() => stats())
           <div class="option-item">
             <label class="option-label">导出格式</label>
             <div class="format-chips">
-              <label v-for="fmt in ['srt','vtt','ass','json']" :key="fmt" :class="['chip', { active: options.formats.includes(fmt as ExportFormat) }]">
+              <label v-for="fmt in ['srt','vtt','ass','json']" :key="fmt" :class="['chip', { active: (options.formats as string[]).includes(fmt) }]">
                 <input type="checkbox" :value="fmt" v-model="options.formats" />
                 {{ fmt.toUpperCase() }}
               </label>
