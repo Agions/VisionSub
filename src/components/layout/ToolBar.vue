@@ -83,7 +83,7 @@ async function handleSave() {
     }, null, 2)
     
     await fileOps.writeTextFile(filePath, projectData)
-    console.log('[ToolBar] Project saved to:', filePath)
+    
     
   } catch (e) {
     console.error('[ToolBar] Failed to save project:', e)

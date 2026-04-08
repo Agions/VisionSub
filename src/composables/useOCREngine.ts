@@ -1,6 +1,7 @@
 import { ref, shallowRef } from 'vue'
 import type { OCRConfig, OCREngine } from '@/types/video'
 import { useImagePreprocessor } from './useImagePreprocessor'
+import type { SubtitleLite } from '@/types/subtitle'
 
 export interface OCRResult {
   text: string
@@ -26,7 +27,6 @@ export interface OCRProcessingOptions {
   useGpu?: boolean
 }
 
-// 模块缓存，避免重复加载
 interface TesseractModule {
   createWorker: (langs: string, workerNum?: number, options?: Record<string, unknown>) => Promise<TesseractWorker>
 }
@@ -62,7 +62,7 @@ export function useOCREngine() {
   const worker = shallowRef<TesseractWorker | null>(null)
   
   /**
-   * 安全地提取ROI，处理边界情况
+   * Safely extract ROI from image data, handling boundary cases.
    */
   function safeExtractROI(
     imageData: ImageData,
@@ -71,7 +71,7 @@ export function useOCREngine() {
     roiWidth: number,
     roiHeight: number
   ): ImageData {
-    // 确保ROI在图像范围内
+        // Ensure ROI is within image bounds
     const safeX = Math.max(0, Math.min(Math.floor(roiX), imageData.width - 1))
     const safeY = Math.max(0, Math.min(Math.floor(roiY), imageData.height - 1))
     const safeW = Math.max(1, Math.min(Math.floor(roiWidth), imageData.width - safeX))
@@ -84,12 +84,12 @@ export function useOCREngine() {
         const srcIdx = ((safeY + y) * imageData.width + (safeX + x)) * 4
         const dstIdx = (y * safeW + x) * 4
         
-        // 严格边界检查
+        // Strict boundary check
         if (srcIdx + 3 < imageData.data.length && dstIdx + 3 < roiImageData.data.length) {
           roiImageData.data[dstIdx] = imageData.data[srcIdx]
           roiImageData.data[dstIdx + 1] = imageData.data[srcIdx + 1]
           roiImageData.data[dstIdx + 2] = imageData.data[srcIdx + 2]
-          roiImageData.data[dstIdx + 3] = 255 // Alpha 通道
+                    roiImageData.data[dstIdx + 3] = 255 // Alpha channel
         }
       }
     }
@@ -124,13 +124,13 @@ export function useOCREngine() {
     
     try {
       if (engine === 'tesseract') {
-        // 缓存 Tesseract 模块避免重复加载
+        // Cache Tesseract module to avoid reloading
         if (!cachedTesseractModule) {
           cachedTesseractModule = await import('tesseract.js')
         }
         const Tesseract = cachedTesseractModule
         
-        // 如果已有 worker，先终止
+        // Terminate existing worker first
         if (worker.value) {
           await worker.value.terminate()
         }
@@ -420,7 +420,6 @@ export function useOCREngine() {
     // Chinese-specific: fix common OCR confusions (lookalike chars)
     const chineseFixes: Record<string, string> = {
       '兀': '元', '苒': '再', '巳': '已', '汢': '汪',
-      '日': '日', '土': '土', '了': '了', '大': '大',
     }
     // Apply only in plausible contexts (this is conservative — only applies exact match)
     for (const [wrong, right] of Object.entries(chineseFixes)) {
@@ -552,19 +551,6 @@ export function useOCREngine() {
     return 1 - dist / Math.max(a.length, b.length)
   }
   
-  /**
-   * Minimal subtitle shape used in post-processing pipelines.
-   * Avoids coupling to the full SubtitleItem type.
-   */
-  type SubtitleLite = {
-    startTime: number
-    endTime: number
-    startFrame: number
-    endFrame: number
-    text: string
-    confidence: number
-  }
-
   /**
    * Filter out jitter subtitles — single-frame noise from OCR instability.
    * A jitter subtitle is: very short duration (< minDuration) +
@@ -767,11 +753,11 @@ export function useOCREngine() {
 
     if (trimmed.length === 0) return issues
 
-    // Check for full-width/half-width inconsistency
+    // Check for full-width character inconsistency
     if (/[\uff00-\uffef]/.test(trimmed)) {
       issues.push({
-        issue: '包含全角字符',
-        suggestion: '建议转换为半角以提高兼容性'
+        issue: 'Contains full-width characters',
+        suggestion: 'Convert to half-width for better compatibility'
       })
     }
 
@@ -780,24 +766,24 @@ export function useOCREngine() {
     const closeBrackets = (trimmed.match(/[\)\]\}]/g) || []).length
     if (openBrackets !== closeBrackets) {
       issues.push({
-        issue: `括号不匹配 (${openBrackets} 开 / ${closeBrackets} 闭)`,
-        suggestion: '检查并修正括号配对'
+        issue: `Unbalanced brackets (${openBrackets} open / ${closeBrackets} close)`,
+        suggestion: 'Check and fix bracket pairing'
       })
     }
 
-    // Check for trailing dots (incomplete sentence)
-    if (/[,;，；]$/.test(trimmed) && !/[.!?。！？]$/.test(trimmed)) {
+    // Check for trailing commas (incomplete sentence)
+    if (/[,;]$/.test(trimmed) && !/[.!?]$/.test(trimmed)) {
       issues.push({
-        issue: '字幕以逗号结尾',
-        suggestion: '可能为未完整识别的字幕'
+        issue: 'Text ends with comma — may be incomplete',
+        suggestion: 'Verify source frame for complete subtitle'
       })
     }
 
     // Check for single-character repetition (OCR glitch)
     if (/(.)\1{4,}/.test(trimmed)) {
       issues.push({
-        issue: '检测到重复字符',
-        suggestion: 'OCR 识别错误，建议检查原画面'
+        issue: 'Detected repeated character pattern',
+        suggestion: 'Likely OCR error — verify source frame'
       })
     }
 

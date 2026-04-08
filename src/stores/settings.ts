@@ -56,7 +56,7 @@ export const useSettingsStore = defineStore('settings', () => {
         return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
       }
     } catch (e) {
-      console.warn('[[HardSubX Settings] Failed to load settings:', e)
+      console.warn('[HardSubX Settings] Failed to load settings:', e)
     }
     return { ...DEFAULT_SETTINGS }
   }

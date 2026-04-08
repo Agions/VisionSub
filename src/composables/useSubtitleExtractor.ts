@@ -213,7 +213,7 @@ export function useSubtitleExtractor() {
       prevFrameData = frameData
     }
 
-    // ── Enhanced post-processing pipeline ──────────────────────────────────
+    // Enhanced post-processing pipeline────────────────────────────────
     // Stage 1: Filter jitter subtitles (very short, low-conf, same as neighbors)
     const rawSubs = subtitleStore.subtitles
     if (opts.mergeSubtitles && rawSubs.length > 1) {

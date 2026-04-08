@@ -1,5 +1,18 @@
 // Subtitle Types
 import type { ROI } from './video'
+/**
+ * Minimal subtitle shape used in post-processing pipelines.
+ * Avoids coupling to the full SubtitleItem type.
+ */
+export interface SubtitleLite {
+  startTime: number
+  endTime: number
+  startFrame: number
+  endFrame: number
+  text: string
+  confidence: number
+}
+
 
 export interface SubtitleItem {
   id: string

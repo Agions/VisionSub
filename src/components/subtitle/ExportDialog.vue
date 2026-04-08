@@ -61,7 +61,7 @@ async function handleExport() {
       const ext = format === 'ssa' ? 'ssa' : format === 'sbv' ? 'sbv' : format
       const fileName = `${baseName}.${ext}`
 
-      console.log(`[Export] ${fileName}: ${content.length} chars`)
+      
       exportResults.value.push(`✅ ${format.toUpperCase()}: ${fileName}`)
     } catch (e) {
       exportResults.value.push(`❌ ${format.toUpperCase()}: 导出失败`)

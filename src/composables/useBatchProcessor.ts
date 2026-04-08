@@ -208,7 +208,7 @@ export function useBatchProcessor() {
         })
       }
       
-      console.log(`[Batch] Processed: ${job.inputPath}`)
+      
     } catch (e) {
       console.error(`[Batch] Failed to process ${job.inputPath}:`, e)
       throw e
