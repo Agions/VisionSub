@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag version (e.g., v3.0.0)'
+        description: 'Tag version (e.g., v3.2.0)'
         required: false
         type: string
 
@@ -15,7 +15,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Build web version
+  # ── Frontend (web build – shared by all platforms) ───────────────────────────
   build-web:
     runs-on: ubuntu-latest
     steps:
@@ -25,27 +25,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
-
-      - name: Add pnpm to PATH
-        run: echo "$HOME/setup-pnpm/node_modules/.bin" >> $GITHUB_PATH
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -59,23 +45,27 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-build
-          path: dist/
+          path: dist
 
-  # Build Tauri desktop app
+  # ── Tauri desktop app (one job per target) ───────────────────────────────────
   build-tauri:
     needs: build-web
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
-            args: --target x86_64-apple-darwin
-          - platform: macos-latest
-            args: --target aarch64-apple-darwin
           - platform: ubuntu-22.04
             args: ''
+            label: ubuntu-x64
           - platform: windows-latest
             args: ''
+            label: windows-x64
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            label: macos-intel
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            label: macos-apple-silicon
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -85,36 +75,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
-
-      - name: Add pnpm to PATH
-        run: echo "$HOME/setup-pnpm/node_modules/.bin" >> $GITHUB_PATH
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies (ubuntu)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libffmpegthumbnailer-dev libjpeg-dev libvips-dev ffmpeg
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -123,6 +90,28 @@ jobs:
         run: pnpm build
         env:
           CI: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux build deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libffmpegthumbnailer-dev \
+            libjpeg-dev \
+            libvips-dev \
+            ffmpeg
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -136,22 +125,76 @@ jobs:
           releaseBody: |
             ## HardSubX ${{ github.ref_name }}
 
-            Professional video subtitle extraction tool.
-
-            ### Features
-            - - Video subtitle extraction via OCR
-            - - Tesseract.js powered OCR
-            - - Multiple export formats (SRT, VTT, ASS, JSON, TXT)
-            - - Keyboard shortcuts
-            - - Theme switching
-            - - Desktop + CLI dual mode
+            Professional video subtitle extraction tool powered by OCR.
 
             ### Downloads
-            - macOS (Apple Silicon)
-              - macOS (Intel)
-              - Linux
-              - Windows
 
-          artifacts: |
-            .vite/dist
-            src-tauri/target/release/bundle/
+            | Platform | Architecture | File |
+            |---------|-------------|------|
+            | macOS | Apple Silicon (M1/M2/M3) | `HardSubX_macos-apple-silicon.tar.gz` |
+            | macOS | Intel | `HardSubX_macos-intel.tar.gz` |
+            | Linux | x86_64 | `HardSubX_ubuntu-x64.tar.gz` |
+            | Windows | x64 | `HardSubX_windows-x64.zip` |
+
+            ### Features
+            - Video subtitle extraction via OCR (Tesseract.js / PaddleOCR / EasyOCR)
+            - Multiple export formats: SRT, VTT, ASS, SSA, JSON, TXT, LRC, SBV, CSV
+            - Multi-language support: Chinese, English, Japanese, Korean, etc.
+            - Keyboard shortcuts & theme switching
+            - Desktop GUI + CLI dual mode
+
+            ### Installation
+            1. Download the archive for your platform
+            2. Extract and run `HardSubX` (Linux/macOS) or `HardSubX.exe` (Windows)
+            3. **macOS**: run `xattr -cr ./HardSubX` if blocked by Gatekeeper
+          args: ${{ matrix.args }}
+
+  # ── Rust CLI binary (cross-platform, separate from Tauri GUI) ───────────────
+  build-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: hardsubx-cli-x86_64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-gnu
+            artifact: hardsubx-cli-x86_64-pc-windows-gnu
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            artifact: hardsubx-cli-x86_64-apple-darwin
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            artifact: hardsubx-cli-aarch64-apple-darwin
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build CLI binary
+        run: |
+          cargo build --release --target ${{ matrix.target }} --bin hardsubx-cli -p hardsubx
+
+      - name: Package CLI
+        run: |
+          EXE_EXT=${{ matrix.platform == 'windows-latest' && '.exe' || '' }}
+          SRC="src-tauri/target/${{ matrix.target }}/release/hardsubx-cli${EXE_EXT}"
+          tar -czvf ${{ matrix.artifact }}.tar.gz -C "$(dirname $SRC)" "$(basename $SRC)"
+
+      - name: Upload CLI binary
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ${{ matrix.artifact }}.tar.gz
+          generate_release_notes: false

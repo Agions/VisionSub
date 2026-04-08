@@ -12,8 +12,8 @@ use std::process::Command;
 #[derive(Parser)]
 #[command(
     name = "hardsubx-cli",
-    version = "3.1.1",
-    about = "HardSubX v3.1.1 - Professional Video Subtitle Extraction Tool"
+    version = "3.2.0",
+    about = "HardSubX v3.2.0 - Professional Video Subtitle Extraction Tool"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -80,7 +80,7 @@ fn main() {
         Commands::Extract { 
             video, output, format, roi, ocr, lang, threshold 
         } => {
-            println!("🎬 HardSubX CLI v3.0.0");
+            println!("🎬 HardSubX CLI v3.2.0");
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             println!("📁 Input: {}", video);
             println!("📂 Output: {}", output);

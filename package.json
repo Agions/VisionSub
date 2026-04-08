@@ -21,8 +21,18 @@
     "subtitle",
     "ocr",
     "extraction",
+    "hardcoded-subtitles",
+    "srt",
+    "vtt",
+    "ass",
     "tauri",
-    "vue"
+    "vue",
+    "tesseract",
+    "paddleocr",
+    "easyocr",
+    "subtitle-extraction",
+    "video-to-text",
+    "caption-extraction"
   ],
   "author": "Agions",
   "license": "MIT",
@@ -45,6 +55,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "icns": "^0.1.0",
+    "icon-gen": "^5.0.0",
     "sass": "^1.69.0",
     "typescript": "^5.3.0",
     "unplugin-auto-import": "^0.17.0",

@@ -24,5 +24,27 @@ export default defineConfig({
     watch: {
       ignored: ['**/src-tauri/**']
     }
+  },
+  build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-vue': ['vue', 'pinia'],
+          'vendor-ocr': ['tesseract.js'],
+          'vendor-ui': ['@vueuse/core']
+        }
+      }
+    }
+  },
+  esbuild: {
+    drop: ['console', 'debugger'],
+    legalComments: 'none'
+  },
+  optimizeDeps: {
+    include: ['vue', 'pinia', '@vueuse/core', 'tesseract.js']
   }
 })
