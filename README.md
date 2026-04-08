@@ -1,5 +1,9 @@
 # HardSubX v3.2.0
 
+<div align="center">
+  <img src="public/logo.svg" width="96" height="96" alt="HardSubX" />
+</div>
+
 > 专业的视频硬字幕提取工具 — 提取字幕与画面帧一一对应，支持高准确度 OCR 后处理
 
 <div align="center">
