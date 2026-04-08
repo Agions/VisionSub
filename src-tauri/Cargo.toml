@@ -6,6 +6,7 @@ authors = ["Agions"]
 license = "MIT"
 repository = "https://github.com/Agions/HardSubX"
 edition = "2021"
+default-run = "hardsubx-cli"
 
 [lib]
 name = "hardsubx_lib"
