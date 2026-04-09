@@ -7,19 +7,30 @@ on:
     branches: [main]
 
 jobs:
-  # ── Type check + lint + test ─────────────────────────────────────────────────
+  # ── Type check + lint + test (parallel with build + rust-test) ───────────────
   quality:
     name: Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -33,19 +44,30 @@ jobs:
       - name: Test
         run: pnpm test
 
-  # ── Tauri build (parallel with quality, no dependency) ───────────────────────
+  # ── Tauri build (parallel with quality + rust-test, no blocking dependency) ───
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -53,7 +75,7 @@ jobs:
       - name: Build Tauri
         run: pnpm tauri build
 
-  # ── Rust unit tests (parallel with quality + build) ─────────────────────────
+  # ── Rust unit tests (parallel with quality + build) ───────────────────────────
   rust-test:
     name: Rust Test
     runs-on: ubuntu-latest
