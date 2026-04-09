@@ -10,9 +10,14 @@ jobs:
   # ── Type check + lint ────────────────────────────────────────────────────────
   quality:
     name: Quality
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,16 +26,11 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - name: Install dependencies
         run: pnpm install
 
       - name: Type check
-        run: pnpm type-check
+        run: pnpm exec vue-tsc --noEmit
 
       - name: Lint
         run: pnpm lint
@@ -41,10 +41,15 @@ jobs:
   # ── Build (verifies compilation, no artifact upload on PRs) ─────────────────
   build:
     name: Build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: quality
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,25 +58,15 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build
-        run: pnpm build
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
         env:
-          CI: true
-
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: hardsubx-dist
-          path: dist
-          retention-days: 7
+          args: pnpm tauri build
 
   # ── Rust unit tests ──────────────────────────────────────────────────────────
   rust-test:
