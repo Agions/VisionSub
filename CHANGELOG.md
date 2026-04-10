@@ -2,11 +2,29 @@
 
 All notable changes to HardSubX are documented here.
 
+## [3.3.1] - 2026-04-10
+
+### 🏗️ Architecture Refactor
+
+- **共享 types + utils 模块**：新建 `types.rs` / `utils.rs`，消除 3 处重复代码
+  - 统一 `BoundingBox`（消除 `video.rs` / `ocr_engine.rs` 重复定义）
+  - 统一 `ROI` 含 `to_pixels()` 方法（消除 `video.rs` 重复定义）
+  - 统一 `OCRConfig` / `map_lang_to_tesseract()`（消除 `ocr.rs` 重复）
+  - `TempFileGuard` RAII 结构（video.rs / ocr.rs 共用，自动清理临时文件）
+  - 统一 `uuid_v4()` 生成函数（消除 `video.rs` / `ocr.rs` 重复）
+- **ocr.rs 完全重写**：使用共享 `types` + `utils`，简化 temp 文件管理逻辑
+
+### 🔧 Code Quality
+
+- **历史失败清理**：删除 8 个历史失败 action runs，保持仓库整洁
+
+---
+
 ## [3.3.0] - 2026-04-10
 
 ### 🎨 Design System v2.0
 
-- **UI 设计系统全面重构**：OKLCH 色彩空间、专业字体（DM Sans/Geist）、标准化动效曲线
+- **UI 设计系统全面重构**：OKLCH 色彩空间，专业字体（DM Sans/Geist）、标准化动效曲线
 - **组件微交互对齐**：Button hover、Modal 背透、StatusBar 脉冲、SubtitleList 骨架屏
 - **Rust 编译错误修复**：PathBuf trait 推断、dialog trait 导入、duplicate detect_scenes 宏冲突
 
@@ -19,26 +37,12 @@ All notable changes to HardSubX are documented here.
 
 - **CI 三路并行**：quality / build / rust-test 完全并行，消除 needs 依赖
 - **pnpm 缓存修复**：setup-node 缓存冲突解决
-- **历史失败清理**：删除 8 个历史失败 action runs
 
 ### Dependencies
 
 - `base64`: downgrade 0.22（0.24 不存在）
 
 ---
-
-## [Unreleased]
-
-### Fixed
-
-- CI: 三路 job 完全并行执行（quality / build / rust-test），消除 `needs` 依赖
-- CI: pnpm 安装与缓存分离，修复 `setup-node@v4 cache: pnpm` 冲突
-- CI: 删除历史失败 action runs（8 个），保持仓库整洁
-- Rust: 修复 `detect_scenes` 重复 `__cmd__` 宏冲突（`#[tauri::command]` 去重）
-- Rust: 修复 `PathBuf` 类型推断问题（显式 `[Option<PathBuf>; 4]` 注解）
-- Rust: 修复 `PathBuf` `Display` trait 推断失败（改用 `.to_string_lossy()`）
-- Rust: 修复 `tauri_plugin_dialog::DialogExt` trait 未导入（`app.dialog()` 方法）
-- Rust: 修复 const 上下文调用非 const 方法（`SYSTEM_DEPENDENCIES` 改用 `OnceLock`）
 
 ## [3.2.1] - 2026-04-08
 
