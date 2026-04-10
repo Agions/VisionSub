@@ -3,7 +3,18 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod commands;
 
-pub use commands::*;
+// Explicitly re-export only specific items to avoid duplicate detect_scenes
+pub use commands::file::{get_file_info, open_file_dialog, read_text_file, save_file_dialog, write_text_file};
+pub use commands::ocr::{process_frame, process_roi};
+pub use commands::ocr_engine::{
+    check_paddle_ocr_available, get_available_ocr_engines, get_ocr_engine_info,
+    init_ocr_engine, ocr_base64_image, ocr_image_tesseract, process_image_ocr,
+    process_paddle_ocr, process_roi_ocr,
+};
+pub use commands::scene::{calculate_frame_similarity, detect_scenes, get_video_info};
+pub use commands::system::{check_system_dependencies, get_tesseract_languages};
+pub use commands::export::{export_multiple_formats, export_subtitles};
+pub use commands::video::{extract_cropped_frame_at_time, extract_frame_at_time, extract_frames, get_video_metadata};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
