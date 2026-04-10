@@ -23,7 +23,6 @@ pub fn run() {
             commands::video::extract_frames,
             commands::video::extract_frame_at_time,
             commands::video::extract_cropped_frame_at_time,
-            commands::video::detect_scenes,
             commands::ocr::process_frame,
             commands::ocr::process_roi,
             commands::export::export_subtitles,

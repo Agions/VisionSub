@@ -77,6 +77,7 @@ impl Default for ROI {
             width: 1920,
             height: 100,
             enabled: true,
+            unit: "percent".to_string(),
         }
     }
 }
