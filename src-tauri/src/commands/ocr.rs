@@ -105,7 +105,7 @@ fn save_frame_to_temp_png(frame_data: &[u8], width: u32, height: u32) -> Result<
 }
 
 /// Process an image file with the Tesseract CLI, returning structured OCRResult.
-async fn process_with_tesseract(image_path: &str, config: &OCRConfig) -> Result<OCRResult, String> {
+async fn process_with_tesseract(image_path: &std::path::Path, config: &OCRConfig) -> Result<OCRResult, String> {
     let tesseract_lang = config
         .language
         .iter()
@@ -116,7 +116,7 @@ async fn process_with_tesseract(image_path: &str, config: &OCRConfig) -> Result<
         .join("+");
 
     let output = Command::new("tesseract")
-        .arg(image_path)
+        .arg(image_path.to_str().unwrap_or("stdout"))
         .arg("stdout")
         .arg("-l")
         .arg(&tesseract_lang)

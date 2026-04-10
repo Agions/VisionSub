@@ -11,8 +11,8 @@ impl TempFileGuard {
         Self(path)
     }
 
-    /// Returns the path being managed.
-    pub fn path(&self) -> &PathBuf {
+    /// Returns the path being managed as a string slice.
+    pub fn path(&self) -> &std::path::Path {
         &self.0
     }
 

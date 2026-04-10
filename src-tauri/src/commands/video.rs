@@ -363,7 +363,7 @@ pub async fn extract_cropped_frame_at_time(
         timestamp_ms,
         uuid
     ));
-    let _guard = TempFileGuard(output_path.clone()); // Auto-cleanup on function exit
+    let _guard = TempFileGuard::new(output_path.clone()); // Auto-cleanup on function exit
 
     let output = Command::new("ffmpeg")
         .args([
@@ -461,7 +461,7 @@ fn extract_frame_at_time_impl(
         timestamp_ms,
         uuid
     ));
-    let _guard = TempFileGuard(output_path.clone()); // Auto-cleanup on function exit
+    let _guard = TempFileGuard::new(output_path.clone()); // Auto-cleanup on function exit
 
     // Build ffmpeg arguments
     let mut args = vec![
