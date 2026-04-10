@@ -34,13 +34,10 @@ cd HardSubX
 # 2. Install frontend dependencies
 pnpm install
 
-# 3. Build the Tauri backend
-cd src-tauri && cargo build --release && cd ..
-
-# 4. Run in development mode
+# 3. Run in development mode (Tauri auto-builds Rust on first run)
 pnpm tauri dev
 
-# 5. Build production package
+# 4. Build production package
 pnpm tauri build
 ```
 

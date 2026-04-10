@@ -2,6 +2,19 @@
 
 All notable changes to HardSubX are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- CI: 三路 job 完全并行执行（quality / build / rust-test），消除 `needs` 依赖
+- CI: pnpm 安装与缓存分离，修复 `setup-node@v4 cache: pnpm` 冲突
+- CI: 删除历史失败 action runs（8 个），保持仓库整洁
+- Rust: 修复 `detect_scenes` 重复 `__cmd__` 宏冲突（`#[tauri::command]` 去重）
+- Rust: 修复 `PathBuf` 类型推断问题（显式 `[Option<PathBuf>; 4]` 注解）
+- Rust: 修复 `PathBuf` `Display` trait 推断失败（改用 `.to_string_lossy()`）
+- Rust: 修复 `tauri_plugin_dialog::DialogExt` trait 未导入（`app.dialog()` 方法）
+- Rust: 修复 const 上下文调用非 const 方法（`SYSTEM_DEPENDENCIES` 改用 `OnceLock`）
+
 ## [3.2.1] - 2026-04-08
 
 ### Refactor

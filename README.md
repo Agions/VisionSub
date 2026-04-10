@@ -132,9 +132,13 @@ HardSubX/
 │
 ├── src-tauri/                 # Rust backend
 │   └── src/commands/         # Tauri IPC commands
-│       ├── video.rs
-│       ├── ocr.rs
-│       └── export.rs
+│       ├── video.rs          # Frame extraction, metadata, ffmpeg
+│       ├── ocr_engine.rs      # PaddleOCR Python bridge
+│       ├── ocr.rs            # EasyOCR / Tesseract.js
+│       ├── scene.rs          # Scene detection (histogram + chi-square)
+│       ├── export.rs          # Format writers (SRT/VTT/ASS/JSON...)
+│       ├── file.rs           # File dialogs, read/write
+│       └── system.rs         # System diagnostics, env check
 │
 ├── docs/                     # Documentation
 │   ├── index.md
