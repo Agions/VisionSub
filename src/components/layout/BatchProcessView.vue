@@ -88,10 +88,23 @@ function getStatusText(status: BatchJob['status']): string {
 }
 
 const s = computed(() => stats())
+
+// Dialog state
+const isOpen = ref(false)
+
+function openDialog() {
+  isOpen.value = true
+}
+
+function closeDialog() {
+  isOpen.value = false
+}
+
+defineExpose({ open: openDialog, close: closeDialog })
 </script>
 
 <template>
-  <div class="batch-view">
+  <div v-if="isOpen" class="batch-view">
     <!-- Header -->
     <header class="batch-header">
       <div class="header-left">
@@ -355,15 +368,26 @@ const s = computed(() => stats())
         </section>
       </div>
     </div>
+
+    <!-- Close button overlay -->
+    <button class="batch-close-btn" @click="closeDialog" title="关闭">
+      <svg viewBox="0 0 20 20" fill="none">
+        <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .batch-view {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
   height: 100%;
   display: flex;
   flex-direction: column;
   background: $bg-base;
+  animation: fade-up 0.3s ease-out both;
 }
 
 // ── Header ────────────────────────────────────────────────
@@ -1021,4 +1045,33 @@ const s = computed(() => stats())
 .job-list-leave-active { transition: all 0.3s ease; }
 .job-list-enter-from { opacity: 0; transform: translateX(20px); }
 .job-list-leave-to { opacity: 0; transform: translateX(-10px); }
+
+// ── Close Button ───────────────────────────────────────────
+.batch-close-btn {
+  position: absolute;
+  top: $space-3;
+  right: $space-3;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $bg-overlay;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  z-index: 1;
+  
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  &:hover {
+    background: $border;
+    color: $text-primary;
+  }
+}
 </style>

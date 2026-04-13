@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useSubtitleStore } from '@/stores/subtitle'
 import { useFileOperations } from '@/composables/useFileOperations'
@@ -15,6 +15,7 @@ const projectName = ref('未命名项目')
 const showAbout = ref(false)
 const isLoading = ref(false)
 const { currentTheme, toggleTheme } = useTheme()
+const openBatchProcess = inject<() => void>('openBatchProcess')
 
 async function handleOpenFile() {
   if (isLoading.value) return
@@ -216,6 +217,23 @@ function openAbout() {
             stroke-linecap="round"
             stroke-linejoin="round"
           />
+        </svg>
+      </button>
+
+      <button
+        class="toolbar-btn icon-only"
+        title="批量处理"
+        @click="openBatchProcess?.()"
+      >
+        <svg
+          class="btn-icon"
+          viewBox="0 0 20 20"
+          fill="none"
+        >
+          <rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/>
         </svg>
       </button>
 

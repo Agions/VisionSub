@@ -11,6 +11,7 @@ import Timeline from '@/components/video/Timeline.vue'
 import StatusBar from '@/components/layout/StatusBar.vue'
 import KeyboardShortcutsHelp from '@/components/common/KeyboardShortcutsHelp.vue'
 import ExportDialog from '@/components/subtitle/ExportDialog.vue'
+import BatchProcessView from '@/components/layout/BatchProcessView.vue'
 
 // Initialize theme
 useTheme()
@@ -31,6 +32,12 @@ provide('openExportDialog', openExportDialog)
 const showTimeline = ref(true)
 const shortcutsHelpRef = ref<InstanceType<typeof KeyboardShortcutsHelp> | null>(null)
 const exportDialogRef = ref<InstanceType<typeof ExportDialog> | null>(null)
+const batchProcessRef = ref<InstanceType<typeof BatchProcessView> | null>(null)
+
+function openBatchProcess() {
+  batchProcessRef.value?.open()
+}
+provide('openBatchProcess', openBatchProcess)
 
 onMounted(() => {
   
@@ -72,6 +79,7 @@ onUnmounted(() => {
     
     <KeyboardShortcutsHelp ref="shortcutsHelpRef" />
     <ExportDialog ref="exportDialogRef" />
+    <BatchProcessView ref="batchProcessRef" />
   </div>
 </template>
 
