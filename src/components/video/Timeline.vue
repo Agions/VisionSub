@@ -14,6 +14,9 @@ const emit = defineEmits<{
 // Timeline zoom level (frames per pixel)
 const zoomLevel = ref(1)
 const isDragging = ref(false)
+const isHovering = ref(false)
+const hoverFrame = ref(0)
+const hoverPosition = ref({ x: 0, y: 0 })
 
 function getFrameFromEvent(e: MouseEvent): number {
   const target = document.querySelector('.timeline-track') as HTMLElement
@@ -44,6 +47,33 @@ function handleMouseUp() {
   document.removeEventListener('mouseup', handleMouseUp)
 }
 
+function handleTimelineHover(e: MouseEvent) {
+  const track = document.querySelector('.timeline-track') as HTMLElement
+  if (!track) return
+  const rect = track.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const percent = Math.max(0, Math.min(1, x / rect.width))
+  hoverFrame.value = Math.floor(percent * totalFrames.value)
+  hoverPosition.value = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+  isHovering.value = true
+}
+
+function handleTimelineLeave() {
+  isHovering.value = false
+}
+
+function formatTime(frame: number): string {
+  const seconds = frame / fps.value
+  const hrs = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
 onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('mouseup', handleMouseUp)
@@ -65,18 +95,6 @@ const playheadPosition = computed(() => {
   if (totalFrames.value === 0) return 0
   return (projectStore.currentFrame / totalFrames.value) * 100
 })
-
-function formatTime(frame: number): string {
-  const seconds = frame / fps.value
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
 
 function handleTimelineClick(e: MouseEvent) {
   const target = e.currentTarget as HTMLElement
@@ -165,6 +183,8 @@ const subtitleCount = computed(() => subtitleStore.totalCount)
       <div
         class="timeline-track"
         @click="handleTimelineClick"
+        @mousemove="handleTimelineHover"
+        @mouseleave="handleTimelineLeave"
       >
         <!-- Subtitle Markers -->
         <div
@@ -192,6 +212,19 @@ const subtitleCount = computed(() => subtitleStore.totalCount)
           <div class="playhead-head"/>
           <div class="playhead-line"/>
         </div>
+      </div>
+
+      <!-- Hover Preview Tooltip -->
+      <div
+        v-if="isHovering || isDragging"
+        class="timeline-preview"
+        :style="{
+          left: `${(hoverFrame / totalFrames) * 100}%`,
+          transform: 'translateX(-50%)'
+        }"
+      >
+        <span class="preview-time">{{ formatTime(hoverFrame) }}</span>
+        <span class="preview-frame">#{{ hoverFrame.toLocaleString() }}</span>
       </div>
     </div>
 
@@ -296,7 +329,7 @@ const subtitleCount = computed(() => subtitleStore.totalCount)
 .timeline-body {
   position: relative;
   height: 44px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .timeline-ruler {
@@ -460,6 +493,47 @@ const subtitleCount = computed(() => subtitleStore.totalCount)
 
 .stat-value {
   color: $gray-400;
+}
+
+// ── Hover Preview ────────────────────────────────────────────
+.timeline-preview {
+  position: absolute;
+  top: -28px;
+  padding: $space-1 $space-2;
+  background: $bg-overlay;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  z-index: $z-overlay;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $bg-overlay;
+  }
+}
+
+.preview-time {
+  font-family: $font-mono;
+  font-size: $text-xs;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.preview-frame {
+  font-family: $font-mono;
+  font-size: 9px;
+  color: $text-muted;
 }
 
 // ── Animations ───────────────────────────────────────────────
