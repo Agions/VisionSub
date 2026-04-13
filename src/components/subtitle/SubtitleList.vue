@@ -15,6 +15,20 @@ const exportFormatKeys = Object.keys(subtitleStore.exportFormats) as (keyof Expo
 const editStartTime = ref('')
 const editEndTime = ref('')
 const hoveredId = ref<string | null>(null)
+const displayCount = ref(100) // Initial batch size
+const BATCH_SIZE = 50
+
+const visibleSubtitles = computed(() => {
+  return subtitleStore.filteredSubtitles.slice(0, displayCount.value)
+})
+
+const hasMore = computed(() => {
+  return displayCount.value < subtitleStore.filteredSubtitles.length
+})
+
+function loadMore() {
+  displayCount.value += BATCH_SIZE
+}
 
 function startEdit(id: string) {
   const sub = subtitleStore.subtitles.find(s => s.id === id)
@@ -206,7 +220,7 @@ const isFiltered = computed(() => subtitleStore.confidenceFilter !== 'all')
       <!-- Cards -->
       <template v-else>
         <div
-          v-for="(sub, idx) in subtitleStore.filteredSubtitles"
+          v-for="sub in visibleSubtitles"
           :key="sub.id"
           :class="['subtitle-card', {
             'is-selected': subtitleStore.selectedId === sub.id,
@@ -217,7 +231,6 @@ const isFiltered = computed(() => subtitleStore.confidenceFilter !== 'all')
           @dblclick="startEdit(sub.id)"
           @mouseenter="hoveredId = sub.id"
           @mouseleave="hoveredId = null"
-          :style="{ animationDelay: `${Math.min(idx * 25, 300)}ms` }"
         >
           <!-- Header row -->
           <div class="card-header">
@@ -287,6 +300,18 @@ const isFiltered = computed(() => subtitleStore.confidenceFilter !== 'all')
           <!-- Selected indicator -->
           <div class="selected-bar"/>
         </div>
+
+        <!-- Load more button -->
+        <button
+          v-if="hasMore"
+          class="load-more-btn"
+          @click="loadMore"
+        >
+          <svg viewBox="0 0 20 20" fill="none" class="load-icon">
+            <path d="M5 10h10M5 10l3-3M5 10l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          加载更多 ({{ subtitleStore.filteredSubtitles.length - displayCount }} 剩余)
+        </button>
       </template>
 
       <!-- Empty state -->
@@ -925,6 +950,35 @@ const isFiltered = computed(() => subtitleStore.confidenceFilter !== 'all')
     &-badge { width: 32px; height: 16px; border-radius: $radius-full; margin-left: auto; }
     &-text { width: 90%; height: 12px; margin-bottom: 6px; }
     &-short { width: 55%; }
+  }
+}
+
+// ── Load More ──────────────────────────────────────────────
+.load-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  width: 100%;
+  padding: $space-3 $space-4;
+  margin-top: $space-2;
+  background: $bg-elevated;
+  border: 1px dashed $border;
+  border-radius: $radius-md;
+  color: $text-secondary;
+  font-size: $text-sm;
+  cursor: pointer;
+  transition: all $transition-base;
+  
+  .load-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  &:hover {
+    background: $bg-overlay;
+    border-color: $primary;
+    color: $primary;
   }
 }
 
