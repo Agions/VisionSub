@@ -12,6 +12,9 @@ export { useImagePreprocessor } from './useImagePreprocessor'
 export { useSubtitleList } from './useSubtitleList'
 export { useOCRTab } from './useOCRTab'
 export { useExportTab } from './useExportTab'
+export { useROITab } from './useROITab'
+export { useProgressTab } from './useProgressTab'
+export { useSettingsTab } from './useSettingsTab'
 
 // Types
 export type { KeyboardShortcut } from './useKeyboardShortcuts'
