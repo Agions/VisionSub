@@ -21,10 +21,22 @@ Professional video hard subtitle extraction tool. Extract hardcoded subtitles fr
 
 ## Key Features
 
-### Frame-Accurate Extraction
-Every subtitle maps to exact video frames. View source frames directly from the subtitle list.
+### 🎯 Frame-Accurate Extraction
+Every subtitle maps to exact video frames. **Timeline thumbnail preview** shows actual video frames on hover.
 
-### Multi-Engine OCR
+### 🔍 Smart Subtitle Navigation
+- **j/k keys** for quick subtitle jumping with toast preview
+- **Confidence filter** (All / High / Medium / Low)
+- **Search** within subtitle text
+- **Virtual scrolling** for smooth performance with 1000+ subtitles
+
+### 🎨 Professional UI
+- **OKLCH design system** — perceptually uniform colors, consistent visual experience
+- **Dark/light theme** — professional video editing aesthetics
+- **Tab-based interface** — Files / Progress / ROI / OCR / Export / Settings
+- **Micro-interactions** — hover effects, transitions, toast notifications
+
+### 🤖 Multi-Engine OCR
 
 | Engine | Technology | Accuracy | Speed | Languages |
 |:---|:---|:---:|:---:|:---:|
@@ -32,27 +44,34 @@ Every subtitle maps to exact video frames. View source frames directly from the 
 | **EasyOCR** | PyTorch | Good | Medium | 80+ |
 | **Tesseract.js** | LSTM + WASM | Good | Fastest | 100+ |
 
-### Smart Post-Processing
-- Multi-pass OCR: recognize multiple times, take the best result
-- Text normalization: full-width to half-width punctuation, Chinese typo correction
-- Confidence calibration: mixed language / short text / repeated chars auto-degraded
-- Subtitle merge: Levenshtein similarity auto-deduplication
+### ✨ Smart Post-Processing
+- **Multi-pass OCR** — recognize multiple times, take the best result
+- **Text normalization** — full-width to half-width punctuation, Chinese typo correction
+- **Confidence calibration** — mixed language / short text / repeated chars auto-degraded
+- **Subtitle merge** — Levenshtein similarity auto-deduplication
+- **Scene detection** — histogram + chi-square test for intelligent frame sampling
 
-### 9 Export Formats
+### 📦 12 Export Formats
 
 | Format | Frame-Mapped | Best For |
 |:---|:---:|:---|
 | **SRT** | No | Universal subtitle players |
 | **WebVTT** | No | Web video |
 | **ASS** | No | Anime fansub, advanced styling |
+| **SSA** | No | Legacy subtitle format |
 | **JSON** | Yes | Frame-accurate editing |
 | **CSV** | Yes | Spreadsheet analysis |
 | **TXT** | No | Plain text |
-| **LRC** | No | Lyrics |
+| **LRC** | No | Lyrics sync |
 | **SBV** | No | YouTube subtitles |
-| **SSA** | No | Legacy subtitle format |
+| **MD** | No | Markdown documentation |
+| **STL** | No | Spruce subtitle format |
+| **TTML** | No | Timed Text ML |
 
-### Supported Input Video
+### 📋 ROI Presets
+Bottom · Top · Left · Right · Center · Custom — one-click selection
+
+### 🎬 Supported Input Video
 MP4 · MKV · AVI · MOV · WebM
 
 ---
@@ -74,7 +93,9 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-### CLI
+---
+
+## CLI Usage
 
 ```bash
 # Basic extraction
@@ -118,35 +139,56 @@ hardsubx-cli --help
 
 ```
 HardSubX/
-├── src/                         # Vue frontend
-│   ├── components/             # Vue components
-│   │   ├── common/            # Button, Modal, Tooltip
-│   │   ├── layout/           # ToolBar, SidePanel, VideoPreview
-│   │   ├── video/            # ROISelector, Timeline
-│   │   └── subtitle/         # SubtitleList, ExportDialog
-│   ├── composables/           # Vue composables
-│   │   ├── useOCREngine.ts   # OCR engine + post-processing
-│   │   ├── useVideoPlayer.ts
-│   │   └── useBatchProcessor.ts
-│   └── stores/               # Pinia stores
+├── src/                         # Vue 3 frontend
+│   ├── components/              # Vue components
+│   │   ├── common/             # Button, Modal, Tooltip, SubtitleToast
+│   │   ├── layout/             # ToolBar, SidePanel, VideoPreview
+│   │   │   ├── tabs/           # Tab components (Files/Progress/ROI/OCR/Export/Settings)
+│   │   │   ├── BatchProcessView.vue
+│   │   │   └── StatusBar.vue
+│   │   ├── video/              # ROISelector, Timeline (with thumbnail preview)
+│   │   └── subtitle/           # SubtitleList, ExportDialog
+│   ├── composables/            # 17 composables (logic/UI separation)
+│   │   ├── useSubtitleList.ts  # Subtitle filtering, search, pagination
+│   │   ├── useVideoPlayer.ts   # Video playback, captureFrame
+│   │   ├── useOCREngine.ts     # OCR engine abstraction + post-processing
+│   │   ├── useSubtitleExtractor.ts
+│   │   ├── useBatchProcessor.ts
+│   │   └── use*.ts             # Tab-specific composables
+│   ├── stores/                 # Pinia stores
+│   │   ├── subtitle.ts         # Subtitle list + export formats
+│   │   ├── project.ts          # Project file state + video metadata
+│   │   └── settings.ts         # Theme, language, OCR preferences
+│   ├── core/                   # Business logic
+│   │   ├── SubtitlePipeline.ts # 4-stage OCR post-processing
+│   │   ├── SubtitleExporter.ts # 12 format writers
+│   │   ├── SceneDetector.ts    # Histogram + chi-square scene detection
+│   │   └── ConfidenceCalibrator.ts
+│   └── types/                  # TypeScript type definitions
 │
-├── src-tauri/                 # Rust backend
-│   └── src/commands/         # Tauri IPC commands
-│       ├── video.rs          # Frame extraction, metadata, ffmpeg
-│       ├── ocr_engine.rs      # PaddleOCR Python bridge
-│       ├── ocr.rs            # EasyOCR / Tesseract.js
-│       ├── scene.rs          # Scene detection (histogram + chi-square)
-│       ├── export.rs          # Format writers (SRT/VTT/ASS/JSON...)
-│       ├── file.rs           # File dialogs, read/write
-│       └── system.rs         # System diagnostics, env check
+├── src-tauri/                  # Rust backend
+│   └── src/
+│       ├── commands/           # Tauri IPC commands
+│       │   ├── video.rs        # Frame extraction, metadata, ffmpeg
+│       │   ├── ocr_engine.rs   # PaddleOCR Python bridge
+│       │   ├── ocr.rs          # EasyOCR / Tesseract.js
+│       │   ├── scene.rs        # Scene detection
+│       │   ├── export.rs       # Format writers
+│       │   ├── file.rs         # File dialogs
+│       │   └── system.rs       # System diagnostics
+│       └── main.rs             # Tauri app entry
 │
-├── docs/                     # Documentation
-│   ├── index.md
-│   ├── getting-started.md
-│   ├── cli.md
-│   └── architecture.md
+├── docs/                       # Documentation
+│   ├── index.md               # Documentation hub
+│   ├── getting-started.md      # Installation and first extraction
+│   ├── architecture.md        # Project structure and design
+│   └── cli.md                 # CLI reference
 │
-└── cli/                     # Node.js CLI tool
+└── cli/                        # Node.js CLI tool
+    └── src/
+        ├── extract.ts
+        ├── formats.ts
+        └── index.ts
 ```
 
 ---

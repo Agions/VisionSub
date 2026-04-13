@@ -34,7 +34,7 @@ cd HardSubX
 # 2. Install frontend dependencies
 pnpm install
 
-# 3. Run in development mode (Tauri auto-builds Rust on first run)
+# 3. Run in development mode (Rust backend auto-builds on first run)
 pnpm tauri dev
 
 # 4. Build production package
@@ -45,13 +45,13 @@ pnpm tauri build
 
 ## First Extraction
 
-### Step 1 — Open a Video File
+### Step 1 — Open a Video
 
-Click **Open** in the toolbar, or drag-and-drop a video file onto the window.
+Click **Open** in the toolbar, or drag-and-drop a video file.
 
-Supported formats: **MP4**, **MKV**, **AVI**, **MOV**, **WebM**
+Supported: **MP4** · **MKV** · **AVI** · **MOV** · **WebM**
 
-### Step 2 — Select the Subtitle Region (ROI)
+### Step 2 — Select Subtitle Region (ROI)
 
 Choose a preset or drag to define the subtitle area:
 
@@ -63,7 +63,7 @@ Choose a preset or drag to define the subtitle area:
 | **Center** | Dialogue overlays |
 | **Custom** | Free-form selection |
 
-### Step 3 — Configure OCR Settings
+### Step 3 — Configure OCR
 
 | Setting | Recommended |
 |:---|:---|
@@ -76,7 +76,7 @@ Choose a preset or drag to define the subtitle area:
 
 ### Step 4 — Extract
 
-Click **Start Extraction**.
+Click **Start Extraction**. Progress shows in the **Progress** tab.
 
 ### Step 5 — Export
 
@@ -99,11 +99,11 @@ Click **Export** in the subtitle panel. Select formats:
 |:---|:---|
 | `Space` | Play / Pause |
 | `J` / `K` | Previous / Next subtitle |
-| `Left / Right` | Frame step |
-| `Shift + Left/Right` | Jump to subtitle |
+| `←` / `→` | Frame step |
+| `Shift + ←/→` | Jump to subtitle |
 | `Ctrl + Z` | Undo |
 | `Ctrl + Y` | Redo |
-| `?` | Show shortcuts |
+| `?` | Show shortcuts help |
 
 ---
 
@@ -118,6 +118,12 @@ npx hardsubx-cli extract video.mp4 --format srt,vtt,json --output ./subs
 
 # Specify ROI + engine
 npx hardsubx-cli extract video.mp4 --roi bottom --ocr paddle --lang ch,en
+
+# High confidence threshold
+npx hardsubx-cli extract video.mp4 --confidence 85
+
+# Process every 2 frames (faster, lower accuracy)
+npx hardsubx-cli extract video.mp4 --frame-interval 2
 ```
 
 See [cli.md](cli.md) for the full CLI reference.

@@ -1,8 +1,16 @@
-# HardSubX
+# HardSubX Documentation
 
-Professional video hard subtitle extraction tool.
+<div align="center">
 
-## Documentation
+Professional video hard subtitle extraction tool. Extract hardcoded subtitles from any video.
+
+**Version**: 3.3.1 · **License**: MIT
+
+</div>
+
+---
+
+## 📖 Documentation
 
 | Guide | Description |
 |:---|:---|
@@ -10,17 +18,34 @@ Professional video hard subtitle extraction tool.
 | [CLI Reference](cli.md) | Full command-line interface reference |
 | [Architecture](architecture.md) | Project structure and technical design |
 
-## Features
+---
 
-- **Frame-accurate extraction** — Each subtitle maps to exact video frames
-- **Multi-engine OCR** — PaddleOCR, EasyOCR, and Tesseract.js with multi-pass refinement
-- **Smart post-processing** — Language-aware text normalization, deduplication, jitter filtering
-- **9 export formats** — SRT, VTT, ASS, SSA, JSON, TXT, LRC, CSV, SBV
-- **ROI presets** — One-click selection for bottom/top/left/right/center subtitles
-- **Batch processing** — Multi-file queue with priority and concurrency control
-- **Dark/light themes** — Professional video editing tool aesthetics
+## ✨ Features
 
-## Quick Install
+### Frame-Accurate Extraction
+Each subtitle maps to exact video frames. **Timeline thumbnail preview** shows actual video frames on hover.
+
+### Multi-Engine OCR
+PaddleOCR, EasyOCR, and Tesseract.js with multi-pass refinement. Real-time accuracy estimation based on engine + language + settings.
+
+### Smart Post-Processing
+- **4-stage pipeline**: filter jitter → merge split → merge similar → compute end time
+- **Language-aware**: full/half-width punctuation, Chinese typo correction
+- **Confidence calibration**: mixed language / short text / repeated chars auto-degraded
+- **Levenshtein similarity** merge for deduplication
+
+### Professional UI
+- **OKLCH design system** — perceptually uniform colors
+- **Tab-based interface** — Files / Progress / ROI / OCR / Export / Settings
+- **Dark/light themes** — professional video editing aesthetics
+- **Virtual scrolling** — smooth performance with 1000+ subtitles
+
+### 12 Export Formats
+SRT · VTT · ASS · SSA · JSON · CSV · TXT · LRC · SBV · MD · STL · TTML
+
+---
+
+## 🚀 Quick Install
 
 ```bash
 git clone https://github.com/Agions/HardSubX.git
@@ -28,6 +53,41 @@ cd HardSubX
 pnpm install
 pnpm tauri dev
 ```
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Key | Action |
+|:---|:---|
+| `Space` | Play / Pause |
+| `J` / `K` | Previous / Next subtitle (with toast preview) |
+| `←` / `→` | Frame step |
+| `Shift + ←/→` | Jump to subtitle |
+| `Ctrl + Z` | Undo |
+| `Ctrl + Y` | Redo |
+| `?` | Show shortcuts |
+
+---
+
+## 📁 Project Structure
+
+```
+HardSubX/
+├── src/                    # Vue 3 frontend (17 composables, 23 components)
+│   ├── components/        # UI components
+│   │   ├── layout/tabs/   # Tab-based UI
+│   │   ├── video/         # Timeline, ROISelector
+│   │   └── subtitle/       # SubtitleList, ExportDialog
+│   ├── composables/        # Logic/UI separation
+│   ├── stores/             # Pinia state
+│   └── core/               # Business logic
+├── src-tauri/             # Rust backend
+├── cli/                   # Node.js CLI tool
+└── docs/                  # This documentation
+```
+
+---
 
 ## License
 
